@@ -18,6 +18,8 @@ void ExampleDriver::TrackingReferenceDevice::Update()
 {
     if (this->device_index_ == vr::k_unTrackedDeviceIndexInvalid)
         return;
+    if (this->device_index_ < 3)
+        return;
 
 
     // Setup pose for this frame

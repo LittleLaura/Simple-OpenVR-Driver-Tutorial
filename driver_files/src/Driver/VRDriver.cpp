@@ -4,6 +4,8 @@
 #include <Driver/ControllerDevice.hpp>
 #include <Driver/TrackingReferenceDevice.hpp>
 
+// debug run: C:\Program Files (x86)\Steam\steamapps\common\SteamVR\bin\win64\vrstartup.exe
+
 vr::EVRInitError ExampleDriver::VRDriver::Init(vr::IVRDriverContext* pDriverContext)
 {
     // Perform driver context initialisation
@@ -14,18 +16,21 @@ vr::EVRInitError ExampleDriver::VRDriver::Init(vr::IVRDriverContext* pDriverCont
     Log("Activating ExampleDriver...");
 
     // Add a HMD
-    this->AddDevice(std::make_shared<HMDDevice>("Example_HMDDevice"));
+    //this->AddDevice(std::make_shared<HMDDevice>("Example_HMDDevice"));
 
     // Add a couple controllers
-    this->AddDevice(std::make_shared<ControllerDevice>("Example_ControllerDevice_Left", ControllerDevice::Handedness::LEFT));
-    this->AddDevice(std::make_shared<ControllerDevice>("Example_ControllerDevice_Right", ControllerDevice::Handedness::RIGHT));
+    //this->AddDevice(std::make_shared<ControllerDevice>("Example_ControllerDevice_Left", ControllerDevice::Handedness::ANY));
+    //this->AddDevice(std::make_shared<ControllerDevice>("Example_ControllerDevice_Right", ControllerDevice::Handedness::ANY));
+    //this->AddDevice(std::make_shared<ControllerDevice>("Example_ControllerDevice_Hip", ControllerDevice::Handedness::ANY));
 
     // Add a tracker
-    this->AddDevice(std::make_shared<TrackerDevice>("Example_TrackerDevice"));
+    this->AddDevice(std::make_shared<TrackerDevice>("Example_TrackerDevice_Hip"));
+    //this->AddDevice(std::make_shared<TrackerDevice>("Example_TrackerDevice_LegL"));
+    //this->AddDevice(std::make_shared<TrackerDevice>("Example_TrackerDevice_LegR"));
 
     // Add a couple tracking references
-    this->AddDevice(std::make_shared<TrackingReferenceDevice>("Example_TrackingReference_A"));
-    this->AddDevice(std::make_shared<TrackingReferenceDevice>("Example_TrackingReference_B"));
+    //this->AddDevice(std::make_shared<TrackingReferenceDevice>("Example_TrackingReference_A"));
+    //this->AddDevice(std::make_shared<TrackingReferenceDevice>("Example_TrackingReference_B"));
 
     Log("ExampleDriver Loaded Successfully");
 

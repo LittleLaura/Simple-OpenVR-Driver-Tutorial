@@ -38,8 +38,8 @@ void ExampleDriver::HMDDevice::Update()
     pose.qRotation.z = (float) pose_rot.z;
 
     // Update position based on rotation
-    linalg::vec<float, 3> forward_vec{-1.0f * (GetAsyncKeyState(0x44) == 0) + 1.0f * (GetAsyncKeyState(0x41) == 0), 0, 0};
-    linalg::vec<float, 3> right_vec{0, 0, 1.0f * (GetAsyncKeyState(0x57) == 0) - 1.0f * (GetAsyncKeyState(0x53) == 0) };
+    linalg::vec<float, 3> forward_vec{-1.0f * (GetAsyncKeyState(0x44) == 0) + 1.0f * (GetAsyncKeyState(0x41) == 0), 0, 0}; // w s
+    linalg::vec<float, 3> right_vec{0, 0, 1.0f * (GetAsyncKeyState(0x57) == 0) - 1.0f * (GetAsyncKeyState(0x53) == 0) }; // a d
     linalg::vec<float, 3> final_dir = forward_vec + right_vec;
     if (linalg::length(final_dir) > 0.01) {
         final_dir = linalg::normalize(final_dir) * (float)delta_seconds;

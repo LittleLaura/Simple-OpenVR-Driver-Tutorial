@@ -16,6 +16,8 @@ void ExampleDriver::ControllerDevice::Update()
 {
     if (this->device_index_ == vr::k_unTrackedDeviceIndexInvalid)
         return;
+    if (this->device_index_ < 3)
+        return;
 
     // Check if this device was asked to be identified
     auto events = GetDriver()->GetOpenVREvents();
@@ -41,7 +43,7 @@ void ExampleDriver::ControllerDevice::Update()
 
     // Setup pose for this frame
     auto pose = IVRDevice::MakeDefaultPose();
-
+    /*
     // Find a HMD
     auto devices = GetDriver()->GetDevices();
     auto hmd = std::find_if(devices.begin(), devices.end(), [](const std::shared_ptr<IVRDevice>& device_ptr) {return device_ptr->GetDeviceType() == DeviceType::HMD; });
@@ -74,6 +76,54 @@ void ExampleDriver::ControllerDevice::Update()
         pose.qRotation.y = hmd_rotation.y;
         pose.qRotation.z = hmd_rotation.z;
     }
+    */
+    vr::TrackedDevicePose_t hmd_pose[3];
+    vr::VRServerDriverHost()->GetRawTrackedDevicePoses(0, hmd_pose, 3);
+
+    GetDriver()->Log("***hmd_pose:");
+    std::string str;
+    for (int i = 0; i < 3; i++)
+    {
+        str += std::to_string(hmd_pose[0].mDeviceToAbsoluteTracking.m[i][3]);
+        str += ",";
+    }
+    GetDriver()->Log(str);
+
+    if (serial_.find("_Hip") != -1) {
+        pose.vecPosition[0] = hmd_pose[0].mDeviceToAbsoluteTracking.m[0][3]; //right
+        pose.vecPosition[1] = hmd_pose[0].mDeviceToAbsoluteTracking.m[1][3] - 0.5; //top
+        pose.vecPosition[2] = hmd_pose[0].mDeviceToAbsoluteTracking.m[2][3] + 0.1; //back
+    }
+    else if (serial_.find("_Right") != -1) {
+        pose.vecPosition[0] = hmd_pose[1].mDeviceToAbsoluteTracking.m[0][3] + 0.1; //right
+        pose.vecPosition[1] = hmd_pose[0].mDeviceToAbsoluteTracking.m[1][3] - 1.0; //top
+        pose.vecPosition[2] = hmd_pose[1].mDeviceToAbsoluteTracking.m[2][3] - 0.1; //back
+    }
+    else if (serial_.find("_Left") != -1) {
+        pose.vecPosition[0] = hmd_pose[2].mDeviceToAbsoluteTracking.m[0][3] - 0.1; //right
+        pose.vecPosition[1] = hmd_pose[0].mDeviceToAbsoluteTracking.m[1][3] - 1.0; //top
+        pose.vecPosition[2] = hmd_pose[2].mDeviceToAbsoluteTracking.m[2][3] - 0.1; //back
+    }
+    else {
+        pose.vecPosition[0] = 0.0; //right
+        pose.vecPosition[1] = 0.0; //top
+        pose.vecPosition[2] = 0.0; //back
+    }
+
+    vr::HmdQuaternion_t q;
+    q.w = sqrt(fmax(0, 1 + hmd_pose[0].mDeviceToAbsoluteTracking.m[0][0] + hmd_pose[0].mDeviceToAbsoluteTracking.m[1][1] + hmd_pose[0].mDeviceToAbsoluteTracking.m[2][2])) / 2;
+    q.x = sqrt(fmax(0, 1 + hmd_pose[0].mDeviceToAbsoluteTracking.m[0][0] - hmd_pose[0].mDeviceToAbsoluteTracking.m[1][1] - hmd_pose[0].mDeviceToAbsoluteTracking.m[2][2])) / 2;
+    q.y = sqrt(fmax(0, 1 - hmd_pose[0].mDeviceToAbsoluteTracking.m[0][0] + hmd_pose[0].mDeviceToAbsoluteTracking.m[1][1] - hmd_pose[0].mDeviceToAbsoluteTracking.m[2][2])) / 2;
+    q.z = sqrt(fmax(0, 1 - hmd_pose[0].mDeviceToAbsoluteTracking.m[0][0] - hmd_pose[0].mDeviceToAbsoluteTracking.m[1][1] + hmd_pose[0].mDeviceToAbsoluteTracking.m[2][2])) / 2;
+    q.x = copysign(q.x, hmd_pose[0].mDeviceToAbsoluteTracking.m[2][1] - hmd_pose[0].mDeviceToAbsoluteTracking.m[1][2]);
+    q.y = copysign(q.y, hmd_pose[0].mDeviceToAbsoluteTracking.m[0][2] - hmd_pose[0].mDeviceToAbsoluteTracking.m[2][0]);
+    q.z = copysign(q.z, hmd_pose[0].mDeviceToAbsoluteTracking.m[1][0] - hmd_pose[0].mDeviceToAbsoluteTracking.m[0][1]);
+    pose.qRotation.w = q.w;
+    pose.qRotation.x = q.x;
+    pose.qRotation.y = q.y;
+    pose.qRotation.z = q.z;
+    GetDriver()->Log("***hmd_angle:" + std::to_string(q.w) + "," + std::to_string(q.x) + "," + std::to_string(q.y) + "," + std::to_string(q.z));
+    
 
     // Check if we need to press any buttons (I am only hooking up the A button here but the process is the same for the others)
     // You will still need to go into the games button bindings and hook up each one (ie. a to left click, b to right click, etc.) for them to work properly
@@ -93,7 +143,8 @@ void ExampleDriver::ControllerDevice::Update()
 
 DeviceType ExampleDriver::ControllerDevice::GetDeviceType()
 {
-    return DeviceType::CONTROLLER;
+    //return DeviceType::CONTROLLER; 
+    return DeviceType::TRACKER;
 }
 
 ExampleDriver::ControllerDevice::Handedness ExampleDriver::ControllerDevice::GetHandedness()
@@ -149,21 +200,16 @@ vr::EVRInitError ExampleDriver::ControllerDevice::Activate(uint32_t unObjectId)
     GetDriver()->GetProperties()->SetUint64Property(props, vr::Prop_CurrentUniverseId_Uint64, 2);
     
     // Set up a model "number" (not needed but good to have)
-    GetDriver()->GetProperties()->SetStringProperty(props, vr::Prop_ModelNumber_String, "example_controller");
+    GetDriver()->GetProperties()->SetStringProperty(props, vr::Prop_ModelNumber_String, "Vive Tracker PVT");
+    GetDriver()->GetProperties()->SetUint64Property(props, vr::Prop_HardwareRevision_Uint64, 1);
 
     // Set up a render model path
-    GetDriver()->GetProperties()->SetStringProperty(props, vr::Prop_RenderModelName_String, "{example}example_controller");
+    GetDriver()->GetProperties()->SetStringProperty(props, vr::Prop_RenderModelName_String, "vr_tracker_vive_1_0");
 
     // Give SteamVR a hint at what hand this controller is for
-    if (this->handedness_ == Handedness::LEFT) {
-        GetDriver()->GetProperties()->SetInt32Property(props, vr::Prop_ControllerRoleHint_Int32, vr::ETrackedControllerRole::TrackedControllerRole_LeftHand);
-    }
-    else if (this->handedness_ == Handedness::RIGHT) {
-        GetDriver()->GetProperties()->SetInt32Property(props, vr::Prop_ControllerRoleHint_Int32, vr::ETrackedControllerRole::TrackedControllerRole_RightHand);
-    }
-    else {
-        GetDriver()->GetProperties()->SetInt32Property(props, vr::Prop_ControllerRoleHint_Int32, vr::ETrackedControllerRole::TrackedControllerRole_OptOut);
-    }
+   
+    GetDriver()->GetProperties()->SetInt32Property(props, vr::Prop_ControllerRoleHint_Int32, vr::ETrackedControllerRole::TrackedControllerRole_OptOut);
+    
 
     // Set controller profile
     GetDriver()->GetProperties()->SetStringProperty(props, vr::Prop_InputProfilePath_String, "{example}/input/example_controller_bindings.json");
